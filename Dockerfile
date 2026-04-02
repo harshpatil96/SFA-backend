@@ -8,8 +8,7 @@ ENV PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get install -y \
     libgl1 \
     libglib2.0-0 \
-    git \
-    git-lfs \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Set work directory
@@ -23,7 +22,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Fetch the actual LFS files now that the repo is copied
-RUN git lfs install && git lfs pull
+RUN curl -L https://github.com/harshpatil96/SFA-backend/raw/main/models/grape_disease_model.h5 -o models/grape_disease_model.h5
 
 # Expose port
 EXPOSE 5000

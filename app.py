@@ -43,8 +43,13 @@ CLASS_NAMES = [
 DISEASE_DATA = {}
 try:
     if os.path.exists(DISEASE_DATA_PATH):
-        with open(DISEASE_DATA_PATH, 'r') as f:
-            DISEASE_DATA = json.load(f)
+        try:
+            with open(DISEASE_DATA_PATH, 'r', encoding='utf-8') as f:
+                DISEASE_DATA = json.load(f)
+        except Exception:
+            # Fallback to UTF-16 in case Windows generated the file
+            with open(DISEASE_DATA_PATH, 'r', encoding='utf-16') as f:
+                DISEASE_DATA = json.load(f)
         print(f"✓ Disease data loaded: {len(DISEASE_DATA)} entries")
     else:
         print(f"⚠ Disease data file not found at {DISEASE_DATA_PATH}")

@@ -36,9 +36,17 @@ try:
                 
                 def clean_obj(obj):
                     if isinstance(obj, dict):
+                        # Fix batch_shape
                         if 'batch_shape' in obj:
                             obj['batch_input_shape'] = obj.pop('batch_shape')
+                        # Fix DTypePolicy
+                        if 'dtype' in obj and isinstance(obj['dtype'], dict) and obj['dtype'].get('class_name') == 'DTypePolicy':
+                            obj['dtype'] = obj['dtype'].get('config', {}).get('name', 'float32')
+                        # Remove Keras 3 noise
                         obj.pop('optional', None)
+                        obj.pop('registered_name', None)
+                        if 'module' in obj and obj['module'] == 'keras': obj.pop('module')
+                        
                         for k in list(obj.keys()): clean_obj(obj[k])
                     elif isinstance(obj, list):
                         for i in obj: clean_obj(i)

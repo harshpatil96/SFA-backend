@@ -24,41 +24,7 @@ print(f"{'='*60}")
 
 # Load model
 try:
-    # Keras 3 to Keras 2 Compatibility Patch
-    import h5py
-    import json
-    with h5py.File(MODEL_PATH, 'a') as f:
-        if 'model_config' in f.attrs:
-            val = f.attrs['model_config']
-            config_str = val.decode('utf-8') if isinstance(val, bytes) else str(val)
-            try:
-                config = json.loads(config_str)
-                
-                def clean_obj(obj):
-                    if isinstance(obj, dict):
-                        # Fix batch_shape
-                        if 'batch_shape' in obj:
-                            obj['batch_input_shape'] = obj.pop('batch_shape')
-                        # Fix DTypePolicy
-                        if 'dtype' in obj and isinstance(obj['dtype'], dict) and obj['dtype'].get('class_name') == 'DTypePolicy':
-                            obj['dtype'] = obj['dtype'].get('config', {}).get('name', 'float32')
-                        # Remove Keras 3 noise
-                        obj.pop('optional', None)
-                        obj.pop('registered_name', None)
-                        if 'module' in obj and obj['module'] == 'keras': obj.pop('module')
-                        
-                        for k in list(obj.keys()): clean_obj(obj[k])
-                    elif isinstance(obj, list):
-                        for i in obj: clean_obj(i)
-                
-                clean_obj(config)
-                new_config = json.dumps(config)
-                if new_config != config_str:
-                    print("✓ Patched Keras 3 metadata for Keras 2 compatibility")
-                    f.attrs['model_config'] = new_config.encode('utf-8')
-            except Exception as e:
-                print(f"⚠ Metadata patch skipped: {e}")
-    
+    # Load model with Keras 3 native support (requires TensorFlow 2.16+)
     model = tf.keras.models.load_model(MODEL_PATH, compile=False)
     print(f"✓ Model loaded successfully from: {MODEL_PATH}")
     print(f"✓ Model Output Shape: {model.output_shape}")

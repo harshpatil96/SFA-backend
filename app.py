@@ -24,7 +24,37 @@ print(f"{'='*60}")
 
 # Load model
 try:
-    # Load model with Keras 3 native support (requires TensorFlow 2.16+)
+    # Universal Keras 3 to Keras 2 Compatibility Polyfill
+    import h5py
+    import json
+    with h5py.File(MODEL_PATH, 'a') as f:
+        if 'model_config' in f.attrs:
+            val = f.attrs['model_config']
+            config_str = val.decode('utf-8') if isinstance(val, bytes) else str(val)
+            try:
+                config = json.loads(config_str)
+                def clean_obj(obj):
+                    if isinstance(obj, dict):
+                        # 1. Map Keras 3 specific shape/dtype fields
+                        if 'batch_shape' in obj: obj['batch_input_shape'] = obj.pop('batch_shape')
+                        if 'dtype' in obj and isinstance(obj['dtype'], dict) and obj['dtype'].get('class_name') == 'DTypePolicy':
+                            obj['dtype'] = obj['dtype'].get('config', {}).get('name', 'float32')
+                        # 2. Strip Keras 3 specific noisy keys
+                        obj.pop('optional', None)
+                        obj.pop('registered_name', None)
+                        obj.pop('quantization_config', None)
+                        obj.pop('module', None)
+                        for k in list(obj.keys()): clean_obj(obj[k])
+                    elif isinstance(obj, list):
+                        for i in obj: clean_obj(i)
+                clean_obj(config)
+                new_config = json.dumps(config)
+                if new_config != config_str:
+                    print("✓ Applied Universal Keras 2 Compatibility Patch")
+                    f.attrs['model_config'] = new_config.encode('utf-8')
+            except Exception as patch_err:
+                print(f"⚠ Compatibility patch skipped: {patch_err}")
+    
     model = tf.keras.models.load_model(MODEL_PATH, compile=False)
     print(f"✓ Model loaded successfully from: {MODEL_PATH}")
     print(f"✓ Model Output Shape: {model.output_shape}")

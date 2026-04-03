@@ -31,16 +31,25 @@ try:
         if 'model_config' in f.attrs:
             val = f.attrs['model_config']
             config_str = val.decode('utf-8') if isinstance(val, bytes) else str(val)
-            import re
-            original_str = config_str
-            # Safe text replacements for Keras 3 -> Keras 2 conversion
-            config_str = config_str.replace('"batch_shape":', '"batch_input_shape":')
-            # Remove "optional" kwargs safely using regex to catch spaces/commas
-            config_str = re.sub(r'"optional":\s*(true|false|True|False)\s*,?', '', config_str)
-            
-            if config_str != original_str:
-                print("✓ Patched Keras 3 InputLayer via string mapping for Keras 2 compatibility")
-                f.attrs['model_config'] = config_str.encode('utf-8')
+            try:
+                config = json.loads(config_str)
+                
+                def clean_obj(obj):
+                    if isinstance(obj, dict):
+                        if 'batch_shape' in obj:
+                            obj['batch_input_shape'] = obj.pop('batch_shape')
+                        obj.pop('optional', None)
+                        for k in list(obj.keys()): clean_obj(obj[k])
+                    elif isinstance(obj, list):
+                        for i in obj: clean_obj(i)
+                
+                clean_obj(config)
+                new_config = json.dumps(config)
+                if new_config != config_str:
+                    print("✓ Patched Keras 3 metadata for Keras 2 compatibility")
+                    f.attrs['model_config'] = new_config.encode('utf-8')
+            except Exception as e:
+                print(f"⚠ Metadata patch skipped: {e}")
     
     model = tf.keras.models.load_model(MODEL_PATH, compile=False)
     print(f"✓ Model loaded successfully from: {MODEL_PATH}")

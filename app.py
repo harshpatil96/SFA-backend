@@ -24,7 +24,28 @@ print(f"{'='*60}")
 
 # Load model
 try:
-    model = tf.keras.models.load_model(MODEL_PATH)
+    # Keras 3 to Keras 2 Compatibility Patch
+    import h5py
+    import json
+    with h5py.File(MODEL_PATH, 'a') as f:
+        if 'model_config' in f.attrs:
+            val = f.attrs['model_config']
+            config_str = val.decode('utf-8') if isinstance(val, bytes) else str(val)
+            config = json.loads(config_str)
+            has_changes = False
+            for layer in config.get('config', {}).get('layers', []):
+                if 'config' in layer:
+                    if 'batch_shape' in layer['config']:
+                        layer['config']['batch_input_shape'] = layer['config'].pop('batch_shape')
+                        has_changes = True
+                    if 'optional' in layer['config']:
+                        layer['config'].pop('optional')
+                        has_changes = True
+            if has_changes:
+                print("✓ Patched Keras 3 InputLayer for Keras 2 compatibility")
+                f.attrs['model_config'] = json.dumps(config).encode('utf-8')
+    
+    model = tf.keras.models.load_model(MODEL_PATH, compile=False)
     print(f"✓ Model loaded successfully from: {MODEL_PATH}")
     print(f"✓ Model Output Shape: {model.output_shape}")
 except Exception as e:

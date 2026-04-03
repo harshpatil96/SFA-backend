@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import tensorflow as tf
-from tensorflow.keras.preprocessing import image
+from tensorflow.keras.utils import img_to_array
 import numpy as np
 import time
 import os
@@ -187,7 +187,7 @@ def predict():
             if img.mode != 'RGB':
                 img = img.convert('RGB')
 
-            img_array = image.img_to_array(img)
+            img_array = img_to_array(img)
             # EfficientNetB0 does internal rescaling
             # img_array = img_array / 255.0  # Removed division
             img_array = np.expand_dims(img_array, axis=0)

@@ -28,7 +28,17 @@ try:
     print(f"✓ Model loaded successfully from: {MODEL_PATH}")
     print(f"✓ Model Output Shape: {model.output_shape}")
 except Exception as e:
-    print(f"✗ Error loading model: {e}")
+    import sys
+    try:
+        file_size = os.path.getsize(MODEL_PATH)
+        MODEL_ERROR = f"Exception: {str(e)} | File size: {file_size} bytes."
+        if file_size < 1000000:
+            with open(MODEL_PATH, 'rb') as f:
+                head = f.read(100)
+                MODEL_ERROR += f" File header: {head}"
+    except Exception as fe:
+        MODEL_ERROR = f"Exception: {str(e)} | Could not read file info: {fe}"
+    print(f"✗ Error loading model: {MODEL_ERROR}")
     model = None
 
 # Verified class list matching the grape model and dataset directory order
@@ -81,6 +91,7 @@ def health_check():
         'status': 'Healthy',
         'timestamp': datetime.now().isoformat(),
         'model_loaded': model is not None,
+        'model_error': MODEL_ERROR if 'MODEL_ERROR' in globals() else None,
         'disease_data_loaded': len(DISEASE_DATA) > 0
     })
 
